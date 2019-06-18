@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
@@ -13,16 +14,13 @@ namespace SqlInjection.Controllers
         {
             return View();
         }
+
         [HttpPost]
         public ActionResult Login(string usuario, string senha)
         {
             var connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=ProdutosDb;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=True;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
-
-            // Código com a vunerabilidade devido a concatenação
-            //var consulta = "SELECT COUNT(*) FROM Usuario WHERE Usuario = '" + usuario + "' AND Senha = '" + senha + "'";
-
-            // Forma mais segura, montando o SELECT que espera os parâmetros @usuario e @senha
-            var consulta = "SELECT COUNT(*) FROM Usuarios WHERE Usuario = "'+ usuario + "' AND Senha = '" + senha + ;
+            //var consulta = "SELECT COUNT(*) FROM Usuarios WHERE Usuario = '" + usuario + "' AND Senha = '" + senha + "'";
+            var consulta = "SELECT Id FROM Usuarios WHERE Usuario = @usuario AND Senha = @senha;";
 
             try
             {
@@ -32,13 +30,23 @@ namespace SqlInjection.Controllers
 
                     using (SqlCommand comando = new SqlCommand(consulta, conexao))
                     {
-                        // Passando os parâmetros de SQL sem a necessidade de concatenar
-                        //comando.Parameters.Add(new SqlParameter("@usuario", usuario));
-                        //comando.Parameters.Add(new SqlParameter("@senha", senha));
+
+                        comando.Parameters.Add(new SqlParameter("@usuario", usuario));
+                        comando.Parameters.Add(new SqlParameter("@senha", senha));
 
                         var resultado = (int)comando.ExecuteScalar();
                         if (resultado > 0)
+                        { 
+                            ////gerando cookie
+                            //var cookie = new HttpCookie("idUsuario", resultado.ToString());
+                            //Response.Cookies.Add(cookie);
+
+                            //sessão
+                            Session["idUsuario"] = resultado.ToString();
+
                             ViewBag.Mensagem = "Login efetuado com sucesso";
+                            return RedirectToAction("List","Produto");
+                        }
                         else
                             ViewBag.Mensagem = "Falha no login";
                     }
